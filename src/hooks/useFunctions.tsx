@@ -22,14 +22,37 @@ type functionContextType = [
     Function[],
     [Function,Component][],
     (functionUri: string, systemName:string, functionName: string) => Promise<FaultTree>,
-    (functionUri: string) => Promise<FailureMode[]>
+    (functionUri: string) => Promise<FailureMode[]>,
+    (functionUri: string) => Promise<string[]>
 ];
 
 export const functionsContext = createContext<functionContextType>(null!);
 
 export const useFunctions = () => {
-    const  [functions, addFunction, editFunction, deleteFunction, addRequiredFunction, allFunctions, functionsAndComponents, generateFDTree, getFailureModes] = useContext(functionsContext);
-    return [functions, addFunction, editFunction, deleteFunction, addRequiredFunction, allFunctions, functionsAndComponents, generateFDTree, getFailureModes] as const;
+    const [
+        functions,
+        addFunction,
+        editFunction,
+        deleteFunction,
+        addRequiredFunction,
+        allFunctions,
+        functionsAndComponents,
+        generateFDTree,
+        getFailureModes,
+        getTransitiveClosure
+     ] = useContext(functionsContext);
+    return [
+        functions,
+        addFunction,
+        editFunction,
+        deleteFunction,
+        addRequiredFunction,
+        allFunctions,
+        functionsAndComponents,
+        generateFDTree,
+        getFailureModes,
+        getTransitiveClosure
+    ] as const;
 }
 
 type FunctionProviderProps = {
@@ -42,18 +65,19 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
     const [_allFunctions, _setAllFunctions] = useState<Function[]>([]);
     const [showSnackbar] = useSnackbar()
     const [_functionsAndComponents,_setFunctionsAndComponents] = useState<[Function,Component][]>([])
+    const [_functionClosures, _setFunctionClosures] = useState<Map<string, String[]>>(new Map());
 
     const addFunction = async (f: Function) => {
         return componentService.addFunction(componentUri, f)
             .then(value => {
                 _setFunctions([..._functions, value])
                 functionService.getComponent(f.iri)
-                    .then((comp) => {
-                        _setFunctionsAndComponents((value) => [...value, [f, comp]]);
-                    })
-                    .catch(() => {
-                        _setFunctionsAndComponents((value) => [...value, [f, null]]);
-                    });
+					.then((comp) => {
+						_setFunctionsAndComponents((value) => [...value, [f, comp]]);
+					})
+					.catch(() => {
+						_setFunctionsAndComponents((value) => [...value, [f, null]]);
+					});
                 showSnackbar('Function created', SnackbarType.SUCCESS)
                 return value
             }).catch(reason => showSnackbar(reason, SnackbarType.ERROR))
@@ -92,6 +116,11 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
                 return null
             })
 
+    }
+
+    const getTransitiveClosure = async (functionUri: string) => {
+        return functionService.getTransitiveClosure(functionUri)
+        .then(value => value)
     }
 
     const getFailureModes = async(functionUri: string) => {
@@ -134,7 +163,20 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
     }, [componentUri]);
 
     return (
-        <functionsContext.Provider value={[_functions, addFunction,editFunction, removeFunction,addRequiredFunction, _allFunctions, _functionsAndComponents,generateFDTree,getFailureModes]}>
+        <functionsContext.Provider
+            value={[
+                _functions,
+                addFunction,
+                editFunction,
+                removeFunction,
+                addRequiredFunction,
+                _allFunctions,
+                _functionsAndComponents,
+                generateFDTree,
+                getFailureModes,
+                getTransitiveClosure
+            ]}
+        >
             {children}
         </functionsContext.Provider>
     );
