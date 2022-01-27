@@ -121,10 +121,10 @@ export const getImpairedBehavior = async (functionUri: string): Promise<FailureM
   }
 };
 
-export const getTransitiveClosure = async (functionUri: string): Promise<string[]> => {
+export const getTransitiveClosure = async (functionUri: string, type: string): Promise<string[]> => {
   try {
     const functionFragment = extractFragment(functionUri);
-    const response = await axiosClient.get<string[]>(`/functions/${functionFragment}/transitiveClosure`, {
+    const response = await axiosClient.get<string[]>(`/functions/${functionFragment}/${type}TransitiveClosure`, {
       headers: authHeaders(),
     });
     return response.data

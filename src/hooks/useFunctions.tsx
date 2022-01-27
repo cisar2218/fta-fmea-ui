@@ -23,7 +23,7 @@ type functionContextType = [
     [Function,Component][],
     (functionUri: string, systemName:string, functionName: string) => Promise<FaultTree>,
     (functionUri: string) => Promise<FailureMode[]>,
-    (functionUri: string) => Promise<string[]>
+    (functionUri: string, type: string) => Promise<string[]>
 ];
 
 export const functionsContext = createContext<functionContextType>(null!);
@@ -118,8 +118,8 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
 
     }
 
-    const getTransitiveClosure = async (functionUri: string) => {
-        return functionService.getTransitiveClosure(functionUri)
+    const getTransitiveClosure = async (functionUri: string, type: string) => {
+        return functionService.getTransitiveClosure(functionUri,type)
         .then(value => value)
     }
 

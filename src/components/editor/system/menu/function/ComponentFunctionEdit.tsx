@@ -52,7 +52,9 @@ const ComponentFunctionsList: React.FC<MyProps> = (props: MyProps) => {
   const [childBehaviors, setChildBehaviors] = useState<Function[]>([]);
   const [open, setOpen] = React.useState(false);
   let [behaviorType, setBehaviorType] = useState<BehaviorType>(BehaviorType.ATOMIC);
-  let [transitiveClosure, setTransitiveClosure] = useState<string[]>([]);
+  const [requiredTransitiveClosure, setRequiredTransitiveClosure] = useState<string[]>([]);
+  const [childTransitiveClosure, setChildTransitiveClosure] = useState<string[]>([]);
+
 
   const { register, handleSubmit, errors, control } = useForm({
     resolver: yupResolver(schema),
@@ -112,9 +114,14 @@ const ComponentFunctionsList: React.FC<MyProps> = (props: MyProps) => {
       childBehaviors.push(allFunctions.find((f) => f.iri == func.iri));
     });
 
-    getTransitiveClosure(props.selectedFunction.iri).then(value => {
-      setTransitiveClosure(value)    
+    getTransitiveClosure(props.selectedFunction.iri, "child").then(value => {
+      setChildTransitiveClosure(value)    
     })
+
+    getTransitiveClosure(props.selectedFunction.iri, "required").then(value => {
+        setRequiredTransitiveClosure(value)
+    })
+
   }, []);
 
   return (
@@ -196,7 +203,7 @@ const ComponentFunctionsList: React.FC<MyProps> = (props: MyProps) => {
                           >
                               {props.functionsAndComponents.map((f) => (
                                   //@ts-ignore
-                                   <MenuItem key={f[0].iri} value={f[0]} className={(transitiveClosure.includes(f[0].iri) ? classes.closure : "")} >                                   
+                                   <MenuItem key={f[0].iri} value={f[0]} className={(childTransitiveClosure.includes(f[0].iri) ? classes.closure : "")} >                                   
                                       <Checkbox checked={!!childBehaviors.includes(f[0])} />
                                       <Tooltip
                                           disableFocusListener
@@ -226,7 +233,7 @@ const ComponentFunctionsList: React.FC<MyProps> = (props: MyProps) => {
                       >
                           {functionsAndComponents.map((f) => (
                               //@ts-ignore
-                              <MenuItem key={f[0].iri} value={f[0]}>
+                              <MenuItem key={f[0].iri} value={f[0]} className={(requiredTransitiveClosure.includes(f[0].iri) ? classes.closure : "")}>
                                   <Checkbox checked={requiredFunctions.includes(f[0])} />
                                   <Tooltip
                                       disableFocusListener
