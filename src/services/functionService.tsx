@@ -60,13 +60,13 @@ export const addRequiredFunction = async (functionUri: string, requiredFunctionU
   }
 };
 
-export const editFunction = async (f: Function): Promise<void> => {
+export const editFunction = async (f: Function): Promise<Function> => {
   try {
     const updateRequest = Object.assign({}, f, { "@context": FUNCTION_CONTEXT });
-    await axiosClient.put("/functions", updateRequest, {
+    const response = await axiosClient.put("/functions", updateRequest, {
       headers: authHeaders(),
     });
-    return new Promise((resolve) => resolve());
+    return JsonLdUtils.compactAndResolveReferences<Function>(response.data, FUNCTION_CONTEXT);
   } catch (e) {
     console.log("Function Service - Failed to call /update");
     const defaultMessage = "Failed to update function";

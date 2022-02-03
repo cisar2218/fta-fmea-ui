@@ -16,14 +16,15 @@ import {FailureMode} from "@models/failureModeModel";
 type functionContextType = [
     Function[],
     (f: Function) => Promise<any>,
-    (funcToEdit: Function) => void,
+    (funcToEdit: Function) => Promise<Function>,
     (funcToDelete: Function) => void,
     (functionUri: string, requiredFunctionUri: string) => void,
     Function[],
     [Function,Component][],
     (functionUri: string, systemName:string, functionName: string) => Promise<FaultTree>,
     (functionUri: string) => Promise<FailureMode[]>,
-    (functionUri: string, type: string) => Promise<string[]>
+    (functionUri: string, type: string) => Promise<string[]>,
+    ([Function,Component], component: Component) => void
 ];
 
 export const functionsContext = createContext<functionContextType>(null!);
@@ -39,7 +40,8 @@ export const useFunctions = () => {
         functionsAndComponents,
         generateFDTree,
         getFailureModes,
-        getTransitiveClosure
+        getTransitiveClosure,
+        addExistingFunction
      ] = useContext(functionsContext);
     return [
         functions,
@@ -51,7 +53,8 @@ export const useFunctions = () => {
         functionsAndComponents,
         generateFDTree,
         getFailureModes,
-        getTransitiveClosure
+        getTransitiveClosure,
+        addExistingFunction
     ] as const;
 }
 
@@ -83,10 +86,38 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
             }).catch(reason => showSnackbar(reason, SnackbarType.ERROR))
     }
 
-    const editFunction = async(f: Function) =>{
-        functionService.editFunction(f)
-            .then(() => showSnackbar('Function edited', SnackbarType.SUCCESS))
-            .catch(reason => showSnackbar(reason, SnackbarType.ERROR))
+    const editFunction = async(f: Function): Promise<Function> =>{
+        return functionService.editFunction(f)
+            .then((func) => {
+                _setFunctions([..._functions.filter((el) => el.iri !== f.iri), func])
+
+                let cmp = _functionsAndComponents.find(el => el[0].iri == f.iri)[1]
+               _setFunctionsAndComponents((value) => [..._functionsAndComponents.filter((el) => el[0].iri != f.iri), [f, cmp]]);
+                showSnackbar('Function edited', SnackbarType.SUCCESS)
+                return func
+            })
+            .catch(reason => {
+                showSnackbar(reason, SnackbarType.ERROR)
+                return null
+            })
+    }   
+
+    const addExistingFunction = async (el: [Function, Component], component: Component) => {
+        let func = el[0] 
+        let oldComponent = el[1]
+
+        if(oldComponent !== null){
+            componentService
+                .removeFunction(oldComponent.iri, func.iri)
+                .then(() => componentService.addFunctionByURI(componentUri, func.iri).then(func => reassignVariables(func, component)))
+        }else{
+            componentService.addFunctionByURI(componentUri, func.iri).then(func => reassignVariables(func, component))
+        }
+    }
+
+    const reassignVariables = (func: Function, component: Component) => {
+        _setFunctions([..._functions, func])
+        _setFunctionsAndComponents([..._functionsAndComponents.filter((e) => e[0].iri != func.iri), [func, component]]);     
     }
 
     const addRequiredFunction = async (functionUri: string, requiredFunctionUri: string) =>{
@@ -100,6 +131,7 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
                 showSnackbar('Function removed', SnackbarType.SUCCESS)
                 const updatedFunctions = filter(_functions, (el) => el.iri !== f.iri)
                 _setFunctions(updatedFunctions)
+                _setFunctionsAndComponents([..._functionsAndComponents.filter((e) => e[0].iri != f.iri), [f,null]]);     
             })
             .catch(reason => showSnackbar(reason, SnackbarType.ERROR))
     }
@@ -174,7 +206,8 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
                 _functionsAndComponents,
                 generateFDTree,
                 getFailureModes,
-                getTransitiveClosure
+                getTransitiveClosure,
+                addExistingFunction
             ]}
         >
             {children}

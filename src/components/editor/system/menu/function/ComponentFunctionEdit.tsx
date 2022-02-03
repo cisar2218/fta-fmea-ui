@@ -37,6 +37,7 @@ import { Component } from "@models/componentModel";
 interface MyProps {
   selectedFunction: Function;
   selectedFailureModes: FailureMode[];
+  setSelectedFunction;
   setShowEdit;
   updateFailureModes;
   setSelectedFailureModes;
@@ -51,7 +52,7 @@ const ComponentFunctionsList: React.FC<MyProps> = (props: MyProps) => {
   const [currentFailureModes, setCurrentFailureModes] = useState<FailureMode[]>([]);
   const [childBehaviors, setChildBehaviors] = useState<Function[]>([]);
   const [open, setOpen] = React.useState(false);
-  let [behaviorType, setBehaviorType] = useState<BehaviorType>(BehaviorType.ATOMIC);
+  const [behaviorType, setBehaviorType] = useState<BehaviorType>(BehaviorType.ATOMIC);
   const [requiredTransitiveClosure, setRequiredTransitiveClosure] = useState<string[]>([]);
   const [childTransitiveClosure, setChildTransitiveClosure] = useState<string[]>([]);
 
@@ -80,7 +81,7 @@ const ComponentFunctionsList: React.FC<MyProps> = (props: MyProps) => {
     props.selectedFunction.requiredFunctions = requiredFunctions;
     props.selectedFunction.functionParts = childBehaviors;
     props.selectedFunction.behaviorType = behaviorType;
-    editFunction(props.selectedFunction);
+    editFunction(props.selectedFunction).then((f) => {props.setSelectedFunction(f)});
     props.updateFailureModes(currentFailureModes, props.selectedFailureModes, props.selectedFunction.iri);
     setRequiredFunctions([]);
     props.setSelectedFailureModes([]);
