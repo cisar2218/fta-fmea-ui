@@ -10,7 +10,8 @@ import {filter} from "lodash";
 import {Component} from "@models/componentModel";
 import {FaultTree} from "@models/faultTreeModel";
 import {getComponent} from "@services/functionService";
-import {FailureMode} from "@models/failureModeModel";
+import {BehaviorType, FailureMode} from "@models/failureModeModel";
+import { CollectionsBookmarkOutlined } from "@material-ui/icons";
 
 
 type functionContextType = [
@@ -102,21 +103,25 @@ export const FunctionsProvider = ({children, componentUri}: FunctionProviderProp
             })
     }   
 
-    const addExistingFunction = async (el: [Function, Component], component: Component) => {
-        let func = el[0] 
-        let oldComponent = el[1]
-
-        if(oldComponent !== null){
+    const addExistingFunction = (functionToAdd: [Function, Component], component: Component) => {
+        let func = functionToAdd[0] 
+        let oldComponent = functionToAdd[1]
+        
+        if(oldComponent != null){
             componentService
                 .removeFunction(oldComponent.iri, func.iri)
-                .then(() => componentService.addFunctionByURI(componentUri, func.iri).then(func => reassignVariables(func, component)))
+                .then(() => componentService.addFunctionByURI(componentUri, func.iri).then(f => reassignVariables(f, component)))
+                .catch(reason => showSnackbar(reason, SnackbarType.ERROR))
         }else{
-            componentService.addFunctionByURI(componentUri, func.iri).then(func => reassignVariables(func, component))
+            componentService.addFunctionByURI(componentUri, func.iri)
+                .then(f => reassignVariables(f, component))
+                .catch(reason => showSnackbar(reason, SnackbarType.ERROR))
         }
     }
 
     const reassignVariables = (func: Function, component: Component) => {
-        _setFunctions([..._functions, func])
+        showSnackbar('Function added', SnackbarType.SUCCESS)
+        _setFunctions([..._functions,func])
         _setFunctionsAndComponents([..._functionsAndComponents.filter((e) => e[0].iri != func.iri), [func, component]]);     
     }
 

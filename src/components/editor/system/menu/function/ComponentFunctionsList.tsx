@@ -69,11 +69,10 @@ const ComponentFunctionsList = ({ component }) => {
     const [behaviorType, setBehaviorType] = useState<BehaviorType>(BehaviorType.ATOMIC);
     const [childBehaviors, setChildBehaviors] = useState<Function[]>([]);
     const [showEdit, setShowEdit] = useState<boolean>(false)
-	const [selectedFunctionsandComponents, setSelectedFunctionsAndComponents] = useState<[Function,Component][]>([])
+	const [functionToAdd, setFunctionToAdd] = useState<[Function,Component]>()
 	const [showSnackbar] = useSnackbar()
-
-
-    const [open, setOpen] = React.useState(false);
+	const [dialog, showDialog] = useState<boolean>(false);
+    const [open, setOpen] = useState<boolean>(false);
 
 	const handleClickOpen = () => {
 		setOpen(true);
@@ -83,34 +82,36 @@ const ComponentFunctionsList = ({ component }) => {
 		setOpen(false);
 	};
 
+	const handleShowDialog = () => {
+		showDialog(true);
+	};
+	
+	const closeDialogWindow = () => {
+		setFunctionToAdd(null);
+		showDialog(false);
+	};
+
+	const handleFunctionToAdd = () => {
+		addExistingFunction(functionToAdd, component)
+		closeDialogWindow();
+	}
+
     const {register, handleSubmit, errors, control, reset} = useForm({
         resolver: yupResolver(schema)
     });
-    const _handleCreateFunction = (values: any) => {
-        if(values.name !== "") { // create new function
-			let createFunction: Function = {name: values.name, requiredFunctions: requiredFunctions,failureModes: [], functionParts: childBehaviors, behaviorType: behaviorType}
-			addFunction(createFunction).then(f => selectedFailureModes.forEach(fm => addFailureModeToFunction(fm.iri,f.iri)))
-		}
 
-		if(selectedFunctionsandComponents.length > 0){
-			addExistingFunctions()
-		}
-		
+    const _handleCreateFunction = (values: any) => {      
+		let createFunction: Function = {name: values.name, requiredFunctions: requiredFunctions,failureModes: [], functionParts: childBehaviors, behaviorType: behaviorType}
+		addFunction(createFunction).then(f => selectedFailureModes.forEach(fm => addFailureModeToFunction(fm.iri,f.iri)))
 		reset(values)
         setSelectedFailureModes([])
         setRequiredFunctions([])
         setBehaviorType(BehaviorType.ATOMIC)
         setChildBehaviors([])
-		setSelectedFunctionsAndComponents([])
+		setFunctionToAdd(null);
         setOpen(false);
     }
 	
-	const addExistingFunctions = async () => {
-		selectedFunctionsandComponents.forEach( el => {
-			addExistingFunction(el, component)
-		})
-	}
-
     const showEditForm = (funcToEdit: Function) => {
         setSelectedFunction(funcToEdit)
         setShowEdit(true)
@@ -320,31 +321,62 @@ const ComponentFunctionsList = ({ component }) => {
 										setSelectedFailureModes={setSelectedFailureModes}
 										setCurrentFailureModes={() => {}}
 									/>
-										
-									<Autocomplete
-										id="add-existing-function"
-										options={functionsAndComponents.filter(el => !el[1] || el[1].iri !== component.iri)}
-										value={selectedFunctionsandComponents}
-										onChange={(event: any, newValue: any) => {
-											setSelectedFunctionsAndComponents(newValue);
-											showSnackbar('Function\'s component will be changed', SnackbarType.WARNING);
-										  }}
-										getOptionLabel={(option) => option[0].name + " (" + (option[1] == null ? "None": option[1].name) + ")"}
-										fullWidth
-										multiple
-										renderInput={(params) => <TextField {...params} label="Add existing function" />}
-									/>									
-									<IconButton className={classes.button} color="primary" component="span" onClick={(childBehaviors.length > 0 && behaviorType == BehaviorType.ATOMIC) ? handleClickOpen : handleSubmit(_handleCreateFunction)}>
-										<AddIcon />
-									</IconButton>
-								</FormControl>
-							</FormGroup>
-						</Box>
-					</Box>
-				)}
-			</List>
-		</React.Fragment>
-	);
+                                    <Box className={classes.button}>
+                                        <Button
+                                            color="primary"
+                                            variant="outlined"
+                                            onClick={handleShowDialog}
+                                            component="span"
+                                        >
+                                            Add existing
+                                        </Button>
+
+                                        <IconButton
+                                            className={classes.button}
+                                            color="primary"
+                                            component="span"
+                                            onClick={
+                                                childBehaviors.length > 0 && behaviorType == BehaviorType.ATOMIC
+                                                    ? handleClickOpen
+                                                    : handleSubmit(_handleCreateFunction)
+                                            }
+                                        >
+                                            <AddIcon />
+                                        </IconButton>
+                                    </Box>
+                                </FormControl>
+                            </FormGroup>
+                        </Box>
+                        <Dialog open={dialog} onClose={handleShowDialog} fullWidth maxWidth="sm">
+                            <DialogTitle>Add existing function </DialogTitle>
+                            <DialogContent>
+                                <Autocomplete
+                                    id="add-existing-function"
+                                    options={functionsAndComponents.filter(
+                                        (el) => !el[1] || el[1].iri !== component.iri
+                                    )}
+                                    value={functionToAdd}
+                                    onChange={(event: any, newValue: any) => {
+                                        setFunctionToAdd(newValue);
+                                        showSnackbar("Function's component will be changed", SnackbarType.INFO);
+                                    }}
+                                    getOptionLabel={(option) =>
+                                        option[0].name + " (" + (option[1] == null ? "None" : option[1].name) + ")"
+                                    }
+                                    fullWidth
+                                    renderInput={(params) => <TextField {...params} label="Existing functions" />}
+                                />					
+                            </DialogContent>
+                            <DialogActions>
+                                <Button color="primary" onClick={closeDialogWindow}>Cancel</Button>
+                                <Button color="primary" onClick={handleFunctionToAdd}> Add</Button>
+                            </DialogActions>
+                        </Dialog>
+                    </Box>
+                )}
+            </List>
+        </React.Fragment>
+    );
 }
 
 export default ComponentFunctionsList;
